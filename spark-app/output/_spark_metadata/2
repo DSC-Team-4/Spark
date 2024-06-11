@@ -1,0 +1,4 @@
+v1
+{"path":"file:///opt/spark-app/output/part-00000-08dfa2ac-c74c-40ce-9f52-d5150984434d-c000.json","size":15789,"isDir":false,"modificationTime":1718096563736,"blockReplication":1,"blockSize":33554432,"action":"add"}
+{"path":"file:///opt/spark-app/output/part-00001-f2f8a879-47fb-4cdf-b2ac-f56885378aa5-c000.json","size":4213,"isDir":false,"modificationTime":1718096563168,"blockReplication":1,"blockSize":33554432,"action":"add"}
+{"path":"file:///opt/spark-app/output/part-00002-685adfcf-23f8-465b-a040-949d354b9c33-c000.json","size":3813,"isDir":false,"modificationTime":1718096563760,"blockReplication":1,"blockSize":33554432,"action":"add"}
