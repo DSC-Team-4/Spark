@@ -1,2 +1,2 @@
 # ./run-jupyter.sh
-sudo docker exec -it jupyter /bin/bash
+docker exec -u 0 -it jupyter bash
