@@ -37,6 +37,33 @@ services:
     volumes:
       - ./spark-app:/opt/spark-app
 
+  spark-worker-4:
+    image: bitnami/spark:latest
+    container_name: spark-worker-4
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    volumes:
+      - ./spark-app:/opt/spark-app
+
+  spark-worker-5:
+    image: bitnami/spark:latest
+    container_name: spark-worker-5
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    volumes:
+      - ./spark-app:/opt/spark-app
+
+  spark-worker-6:
+    image: bitnami/spark:latest
+    container_name: spark-worker-6
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    volumes:
+      - ./spark-app:/opt/spark-app
+
   zeppelin:
     image: apache/zeppelin:0.9.0
     ports:
