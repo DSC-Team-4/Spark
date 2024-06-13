@@ -1,0 +1,51 @@
+services:
+  spark-master:
+    image: custom-spark:latest
+    container_name: spark-master-ewma
+    environment:
+      - SPARK_MODE=master
+      - SPARK_MASTER_HOST=spark-master-ewma
+    ports:
+      - "7078:7077"
+      - "8081:8080"
+    volumes:
+      - /opt/spark-app:/opt/spark-app
+    networks:
+      - spark-network
+
+  spark-worker-1:
+    image: custom-spark:latest
+    container_name: spark-worker-1-ewma
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master-ewma:7077
+    volumes:
+      - /opt/spark-app:/opt/spark-app
+    networks:
+      - spark-network
+
+  spark-worker-2:
+    image: custom-spark:latest
+    container_name: spark-worker-2-ewma
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master-ewma:7077
+    volumes:
+      - /opt/spark-app:/opt/spark-app
+    networks:
+      - spark-network
+
+  spark-worker-3:
+    image: custom-spark:latest
+    container_name: spark-worker-3-ewma
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master-ewma:7077
+    volumes:
+      - /opt/spark-app:/opt/spark-app
+    networks:
+      - spark-network
+
+networks:
+  spark-network:
+    external: true

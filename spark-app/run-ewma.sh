@@ -1,4 +1,4 @@
-docker exec -it spark-master spark-submit \
-  --master spark://spark-master:7077 \
-  --conf "spark.executor.instances=3" \
+# ./run-ewma.sh
+docker exec -it spark-master-ewma spark-submit \
+  --master spark://spark-master-ewma:7077 \
   /opt/spark-app/ewma.py
