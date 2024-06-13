@@ -9,7 +9,7 @@ services:
       - "7077:7077"
       - "8080:8080"
     volumes:
-      - /opt/spark-app:/opt/spark-app
+      - ./spark-app:/opt/spark-app
     networks:
       - spark-network
 
@@ -20,7 +20,7 @@ services:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master-wiki:7077
     volumes:
-      - /opt/spark-app:/opt/spark-app
+      - ./spark-app:/opt/spark-app
     networks:
       - spark-network
 
@@ -31,7 +31,7 @@ services:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master-wiki:7077
     volumes:
-      - /opt/spark-app:/opt/spark-app
+      - ./spark-app:/opt/spark-app
     networks:
       - spark-network
 
@@ -42,7 +42,7 @@ services:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master-wiki:7077
     volumes:
-      - /opt/spark-app:/opt/spark-app
+      - ./spark-app:/opt/spark-app
     networks:
       - spark-network
 
