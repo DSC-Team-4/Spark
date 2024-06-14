@@ -14,8 +14,3 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Switch back to the non-root user
 USER 1001
-
-# Set the entrypoint
-ENTRYPOINT ["/entrypoint.sh"]
-CMD ["spark-shell"]
-

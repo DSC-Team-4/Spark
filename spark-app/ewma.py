@@ -1,44 +1,69 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, lit, when, avg, sum as _sum
-from pyspark.sql.window import Window
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType, FloatType, TimestampType
+from pyspark.sql.functions import col, lit, udf, unix_timestamp
+from pyspark.sql.types import FloatType, StructType, StructField, StringType
+from datetime import datetime, timedelta
+import requests
+import json
+
+# API 엔드포인트
+read_api_url = "http://34.168.247.75:8080/get-ewma-data"
+write_api_url = "http://34.168.247.75:8080/update-ewma-data"
+
+# 지수 가중 이동 평균 계산 함수
+def calculate_ewma(previous_ewma, new_value, alpha=0.1):
+    if previous_ewma is None:
+        return new_value
+    return alpha * new_value + (1 - alpha) * previous_ewma
+
+# UDF로 등록
+ewma_udf = udf(calculate_ewma, FloatType())
 
 # Spark 세션 생성
 spark = SparkSession.builder \
-    .appName("WikiEditAnalysis") \
+    .appName("WikiDataProcessing") \
     .getOrCreate()
 
-# MySQL JDBC 설정
-jdbc_url = "jdbc:mysql://your_db_host:3306/your_db_name"
-db_properties = {
-    "user": "your_db_user",
-    "password": "your_db_password",
-    "driver": "com.mysql.cj.jdbc.Driver"
-}
+# 데이터 스키마 정의
+schema = StructType([
+    StructField("doc_id", StringType(), True),
+    StructField("previous_ewma", FloatType(), True),
+    StructField("edit_count", FloatType(), True)
+])
 
-# DB에서 최근 1일간 데이터 읽기
-query = """
-SELECT doc_id, edited_at, previous_ema, edit_count
-FROM wiki_edits
-WHERE edited_at >= NOW() - INTERVAL 1 DAY
-"""
+# 최근 1일간 데이터를 읽어오는 함수
+def get_recent_data():
+    response = requests.get(read_api_url)
+    if response.status_code == 200:
+        return json.loads(response.text)
+    else:
+        raise Exception(f"Failed to fetch data: {response.status_code}, {response.text}")
 
-wiki_edits_df = spark.read.jdbc(url=jdbc_url, table=f"({query}) as wiki_edits", properties=db_properties)
+# API에서 데이터 읽기
+recent_data = get_recent_data()
 
-# 지수가중이동평균(EMA) 계산
-def calculate_ema(df, alpha=0.1):
-    window_spec = Window.partitionBy("doc_id").orderBy("edited_at").rowsBetween(-1, 0)
-    df = df.withColumn("ema", when(col("previous_ema").isNull(), col("edit_count"))
-                        .otherwise(alpha * col("edit_count") + (1 - alpha) * col("previous_ema")))
-    return df
+# Spark DataFrame 생성
+df = spark.createDataFrame(recent_data, schema)
 
-wiki_edits_df = calculate_ema(wiki_edits_df)
+# 새로운 EWMA 계산
+df = df.withColumn("new_ewma", ewma_udf(col("previous_ewma"), col("edit_count")))
 
-# DB에 결과 저장
-wiki_edits_df.write.jdbc(url=jdbc_url, table="wiki_edits", mode="append", properties=db_properties)
+# 각 행을 API로 전송하는 함수
+def send_to_api(row):
+    data = {
+        "doc_id": row.doc_id,
+        "new_ewma": row.new_ewma
+    }
+    response = requests.post(write_api_url, json=data)
+    if response.status_code != 200:
+        print(f"Failed to send data for doc_id {row.doc_id}: {response.status_code}, {response.text}")
 
-# 데이터 프레임 내용 출력 (디버깅 용도)
-wiki_edits_df.show()
+# 각 배치마다 데이터를 API로 전송하는 함수
+def foreach_batch_function(df, epoch_id):
+    df.foreach(send_to_api)
 
-# Spark 세션 종료
-spark.stop()
+# 스트리밍 쿼리 시작
+query = df.writeStream \
+    .foreachBatch(foreach_batch_function) \
+    .start()
+
+query.awaitTermination()

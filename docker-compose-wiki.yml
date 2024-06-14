@@ -1,5 +1,5 @@
 services:
-  spark-master:
+  spark-master-wiki:
     image: custom-spark:latest
     container_name: spark-master-wiki
     environment:
@@ -11,9 +11,9 @@ services:
     volumes:
       - ./spark-app:/opt/spark-app
     networks:
-      - spark-network
+      - spark-network-wiki
 
-  spark-worker-1:
+  spark-worker-1-wiki:
     image: custom-spark:latest
     container_name: spark-worker-1-wiki
     environment:
@@ -22,9 +22,9 @@ services:
     volumes:
       - ./spark-app:/opt/spark-app
     networks:
-      - spark-network
+      - spark-network-wiki
 
-  spark-worker-2:
+  spark-worker-2-wiki:
     image: custom-spark:latest
     container_name: spark-worker-2-wiki
     environment:
@@ -33,9 +33,9 @@ services:
     volumes:
       - ./spark-app:/opt/spark-app
     networks:
-      - spark-network
+      - spark-network-wiki
 
-  spark-worker-3:
+  spark-worker-3-wiki:
     image: custom-spark:latest
     container_name: spark-worker-3-wiki
     environment:
@@ -44,8 +44,8 @@ services:
     volumes:
       - ./spark-app:/opt/spark-app
     networks:
-      - spark-network
+      - spark-network-wiki
 
 networks:
-  spark-network:
+  spark-network-wiki:
     external: true

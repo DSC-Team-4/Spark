@@ -1,5 +1,5 @@
 services:
-  spark-master:
+  spark-master-ewma:
     image: custom-spark:latest
     container_name: spark-master-ewma
     environment:
@@ -11,9 +11,9 @@ services:
     volumes:
       - ./spark-app:/opt/spark-app
     networks:
-      - spark-network
+      - spark-network-ewma
 
-  spark-worker-1:
+  spark-worker-1-ewma:
     image: custom-spark:latest
     container_name: spark-worker-1-ewma
     environment:
@@ -22,9 +22,9 @@ services:
     volumes:
       - ./spark-app:/opt/spark-app
     networks:
-      - spark-network
+      - spark-network-ewma
 
-  spark-worker-2:
+  spark-worker-2-ewma:
     image: custom-spark:latest
     container_name: spark-worker-2-ewma
     environment:
@@ -33,9 +33,9 @@ services:
     volumes:
       - ./spark-app:/opt/spark-app
     networks:
-      - spark-network
+      - spark-network-ewma
 
-  spark-worker-3:
+  spark-worker-3-ewma:
     image: custom-spark:latest
     container_name: spark-worker-3-ewma
     environment:
@@ -44,8 +44,8 @@ services:
     volumes:
       - ./spark-app:/opt/spark-app
     networks:
-      - spark-network
+      - spark-network-ewma
 
 networks:
-  spark-network:
+  spark-network-ewma:
     external: true

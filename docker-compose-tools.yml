@@ -1,13 +1,13 @@
 services:
   zeppelin:
-    image: apache/zeppelin:latest
+    image: apache/zeppelin:0.9.0
     container_name: zeppelin
     ports:
       - "8082:8080"
     volumes:
       - ./spark-app:/opt/spark-app
     networks:
-      - spark-network
+      - spark-network-tools
 
   jupyter:
     image: jupyter/all-spark-notebook:latest
@@ -17,8 +17,8 @@ services:
     volumes:
       - ./spark-app:/opt/spark-app
     networks:
-      - spark-network
+      - spark-network-tools
 
 networks:
-  spark-network:
+  spark-network-tools:
     external: true
