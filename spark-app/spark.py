@@ -58,7 +58,7 @@ wiki_domains = {
     "ta": "스리랑카",
     "tl": "필리핀",
     "ur": "파키스탄",
-    "common": "공통"
+    "commons": "공통"
 }
 
 db_url = "http://34.168.247.75:8080/save"
@@ -69,33 +69,29 @@ def get_country_from_url(url):
     if match:
         lang_code = match.group(1)
         return wiki_domains.get(lang_code, "알 수 없음")
-    return "알 수 없음"
+    return "문서 아님"
 
 # API에 데이터를 전송하는 함수 정의
 def send_to_api(row, log_file):
-    if not row.title or not row.editedAt or not row.domain or not row.uri or not row.metaId or not row.namespace:
+    if not row.title or not row.editedAt or not row.uri or not row.metaId or row.namespace:
         return
-    if row.namespace == 0 :
-        log_file.write(f'namespace: {row.namespace}, title: {row.title}\n')
-    if row.namespace != 0:
-        log_file.write(f'{row.schema}, namespace: {row.namespace}, Not Zero!\n')
-        return
-    country = get_country_from_url(row.uri)
-    log_file.write(f'country: {country}\n')
-    if country == "알 수 없음":
-        return
-    log_file.write(f'From: {country}, Title: {row.title}\n')
-
-    data = {
-        "title": row.title,
-        "editedAt": row.editedAt.isoformat(),
-        "country": country,
-        "uri": row.uri,
-        "metaId": row.metaId
-    }
-    response = requests.post(db_url, json=data)
-    log_file.write(f"Response status: {response.status_code}, Response body: {response.text}\n")
-    log_file.flush()
+    if row.namespace == 0:
+        country = get_country_from_url(row.uri)
+        if country == "문서 아님": return
+        log_file.write('=============================================\n')
+        log_file.write(f'Time: {row.editedAt}, Title: {row.title}, From: {country}\n')
+        log_file.write('=============================================\n')
+    
+        data = {
+            "title": row.title,
+            "editedAt": row.editedAt.isoformat(),
+            "country": country,
+            "uri": row.uri,
+            "metaId": row.metaId
+        }
+        response = requests.post(db_url, json=data)
+        log_file.write(f"Response status: {response.status_code}, Response body: {response.text}\n")
+        log_file.flush()
 
 # 각 배치마다 데이터를 API로 전송
 def foreach_batch_function(df, epoch_id):
@@ -126,25 +122,21 @@ kafka_df = kafka_df.selectExpr("CAST(value AS STRING) as json")
 
 # 데이터 스키마 정의
 schema = StructType([
-    StructField("$schema", StringType(), True),
     StructField("namespace", IntegerType(), True),
     StructField("title", StringType(), True),
     StructField("meta", StructType([
         StructField("id", StringType(), True),
         StructField("uri", StringType(), True),
-        StructField("dt", StringType(), True),
-        StructField("domain", StringType(), True)
+        StructField("dt", StringType(), True)
     ]), True)
 ])
 
 # JSON 데이터 파싱
 parsed_df = kafka_df.select(from_json(col("json"), schema).alias("data")) \
     .select(
-        col("data.$schema").alias("schema"),
         col("data.title").alias("title"),
         col("data.namespace").alias("namespace"),
         to_timestamp(col("data.meta.dt"), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("editedAt"),
-        col("data.meta.domain").alias("domain"),
         col("data.meta.uri").alias("uri"),
         col("data.meta.id").alias("metaId")
     )
@@ -163,7 +155,7 @@ query = parsed_df.writeStream \
     .awaitTermination()
 
 # 스트리밍 쿼리 종료
-query.stop()
+# query.stop()
 
 # Spark 세션 종료
 # spark.stop()
