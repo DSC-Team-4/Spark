@@ -294,7 +294,7 @@ while True:
     update_api(ewma_df)
 
     # 1분 대기
-    time.sleep(300)
+    time.sleep(60)
 
 # Spark 세션 종료
 spark.stop()

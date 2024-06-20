@@ -1,3 +1,0 @@
-v1
-{"path":"file:///opt/spark-app/output/part-00000-8ee15156-ed50-439f-a85c-026e049005cd-c000.json","size":14849,"isDir":false,"modificationTime":1718097414414,"blockReplication":1,"blockSize":33554432,"action":"add"}
-{"path":"file:///opt/spark-app/output/part-00001-8111d0fb-f489-47a7-a4e0-7aca9823a11b-c000.json","size":4479,"isDir":false,"modificationTime":1718097414886,"blockReplication":1,"blockSize":33554432,"action":"add"}
