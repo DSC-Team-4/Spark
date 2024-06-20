@@ -5,6 +5,8 @@ import requests
 import json
 import uuid
 import re
+from datetime import datetime
+import pytz
 
 wiki_domains = {
     "en": "미국",
@@ -71,26 +73,38 @@ def get_country_from_url(url):
         return wiki_domains.get(lang_code, "알 수 없음")
     return "문서 아님"
 
+# 한국 시간으로 변환하는 함수
+def convert_to_korean_time(utc_time):
+    utc_time = datetime.strptime(utc_time, '%Y-%m-%dT%H:%M:%S')
+    utc_time = utc_time.replace(tzinfo=pytz.utc)
+    korean_time = utc_time.astimezone(pytz.timezone('Asia/Seoul'))
+    return korean_time.strftime('%Y-%m-%dT%H:%M:%S')
+
 # API에 데이터를 전송하는 함수 정의
 def send_to_api(row, log_file):
-    if not row.title or not row.editedAt or not row.uri or not row.metaId or row.namespace:
+    if not row.title or not row.editedAt or not row.uri or not row.metaId or not row.kind or row.namespace:
         return
-    if row.namespace == 0:
+    if row.namespace == 0 and row.kind == 'edit':
         country = get_country_from_url(row.uri)
         if country == "문서 아님": return
-        log_file.write('=============================================\n')
-        log_file.write(f'Time: {row.editedAt}, Title: {row.title}, From: {country}\n')
-        log_file.write('=============================================\n')
+
+        korean_time = convert_to_korean_time(row.editedAt.isoformat())
     
+        log_file.write('=============================================\n')
+        log_file.write(f'UTC Time: {row.editedAt.isoformat()}, Korean Time: {korean_time}, Title: {row.title}, From: {country}\n')
+        log_file.write('=============================================\n')
+        
         data = {
             "title": row.title,
-            "editedAt": row.editedAt.isoformat(),
+            "editedAt": korean_time,
             "country": country,
             "uri": row.uri,
             "metaId": row.metaId
         }
-        response = requests.post(db_url, json=data)
-        log_file.write(f"Response status: {response.status_code}, Response body: {response.text}\n")
+        try:
+            response = requests.post(db_url, json=data)
+            log_file.write(f"Response status: {response.status_code}, Response body: {response.text}\n")
+        except: pass
         log_file.flush()
 
 # 각 배치마다 데이터를 API로 전송
@@ -105,6 +119,9 @@ spark = SparkSession.builder \
     .master("spark://spark-master-wiki:7077") \
     .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1") \
     .config("spark.executor.cores", "8") \
+    .config("spark.executor.memory", "4g") \
+    .config("spark.driver.memory", "2g") \
+    .config("spark.memory.fraction", "0.8") \
     .getOrCreate()
 
 # Kafka에서 읽기
@@ -113,7 +130,7 @@ kafka_df = spark.readStream \
     .option("kafka.bootstrap.servers", kafka_url) \
     .option("kafka.value.deserializer.encoding", "UTF-8") \
     .option("subscribe", "wiki") \
-    .option("startingOffsets", "earliest") \
+    .option("startingOffsets", "latest") \
     .option("failOnDataLoss", "false") \
     .load()
 
@@ -122,23 +139,27 @@ kafka_df = kafka_df.selectExpr("CAST(value AS STRING) as json")
 
 # 데이터 스키마 정의
 schema = StructType([
-    StructField("namespace", IntegerType(), True),
-    StructField("title", StringType(), True),
+    StructField("page_change_kind", StringType(), True),
+    StructField("page", StructType([
+        StructField("page_id", StringType(), True),
+        StructField("page_title", StringType(), True),
+        StructField("namespace_id", IntegerType(), True)
+    ]), True),
+    StructField("dt", StringType(), True),
     StructField("meta", StructType([
-        StructField("id", StringType(), True),
         StructField("uri", StringType(), True),
-        StructField("dt", StringType(), True)
     ]), True)
 ])
 
 # JSON 데이터 파싱
 parsed_df = kafka_df.select(from_json(col("json"), schema).alias("data")) \
     .select(
-        col("data.title").alias("title"),
-        col("data.namespace").alias("namespace"),
-        to_timestamp(col("data.meta.dt"), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("editedAt"),
+        col("data.page_change_kind").alias("kind"),
+        col("data.page.page_id").alias("metaId"),
+        col("data.page.page_title").alias("title"),
+        col("data.page.namespace_id").alias("namespace"),
+        to_timestamp(col("data.dt"), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("editedAt"),
         col("data.meta.uri").alias("uri"),
-        col("data.meta.id").alias("metaId")
     )
 
 # 데이터 확인을 위해 일부 출력 (10초 제한)
@@ -146,7 +167,7 @@ parsed_df = kafka_df.select(from_json(col("json"), schema).alias("data")) \
 #     .format("console") \
 #     .outputMode("append") \
 #     .start() \
-#     .awaitTermination(10)
+#     .awaitTermination(100)
 
 # 스트리밍 쿼리 시작
 query = parsed_df.writeStream \
